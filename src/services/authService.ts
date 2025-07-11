@@ -1,9 +1,10 @@
 import { User, AuthState } from '../types';
 
 const AUTH_KEY = 'project-manager-auth';
+const USERS_KEY = 'project-manager-users';
 
 // Mock users for demo
-const mockUsers: User[] = [
+const initialUsers: User[] = [
   {
     id: '1',
     name: 'Admin User',
@@ -15,6 +16,18 @@ const mockUsers: User[] = [
     name: 'John Doe',
     email: 'john@example.com',
     role: 'user'
+  },
+  {
+    id: '3',
+    name: 'Jane Smith',
+    email: 'jane@example.com',
+    role: 'user'
+  },
+  {
+    id: '4',
+    name: 'Mike Johnson',
+    email: 'mike@example.com',
+    role: 'admin'
   }
 ];
 
@@ -22,7 +35,8 @@ export const authService = {
   login: (email: string, password: string): Promise<AuthState> => {
     return new Promise((resolve, reject) => {
       setTimeout(() => {
-        const user = mockUsers.find(u => u.email === email);
+        const users = authService.getUsers();
+        const user = users.find(u => u.email === email);
         if (user && password === 'password') {
           const authState: AuthState = {
             isAuthenticated: true,
@@ -41,7 +55,8 @@ export const authService = {
   register: (name: string, email: string, password: string): Promise<AuthState> => {
     return new Promise((resolve, reject) => {
       setTimeout(() => {
-        const existingUser = mockUsers.find(u => u.email === email);
+        const users = authService.getUsers();
+        const existingUser = users.find(u => u.email === email);
         if (existingUser) {
           reject(new Error('Email already exists'));
           return;
@@ -75,6 +90,41 @@ export const authService = {
   },
 
   getUsers: (): User[] => {
-    return mockUsers;
+    const stored = localStorage.getItem(USERS_KEY);
+    if (!stored) {
+      localStorage.setItem(USERS_KEY, JSON.stringify(initialUsers));
+      return initialUsers;
+    }
+    return JSON.parse(stored);
+  },
+
+  addUser: (userData: Omit<User, 'id'>): User => {
+    const users = authService.getUsers();
+    const newUser: User = {
+      ...userData,
+      id: Date.now().toString()
+    };
+    users.push(newUser);
+    localStorage.setItem(USERS_KEY, JSON.stringify(users));
+    return newUser;
+  },
+
+  updateUser: (id: string, updates: Partial<Omit<User, 'id'>>): User | null => {
+    const users = authService.getUsers();
+    const index = users.findIndex(u => u.id === id);
+    if (index === -1) return null;
+
+    users[index] = { ...users[index], ...updates };
+    localStorage.setItem(USERS_KEY, JSON.stringify(users));
+    return users[index];
+  },
+
+  deleteUser: (id: string): boolean => {
+    const users = authService.getUsers();
+    const filteredUsers = users.filter(u => u.id !== id);
+    if (filteredUsers.length === users.length) return false;
+    
+    localStorage.setItem(USERS_KEY, JSON.stringify(filteredUsers));
+    return true;
   }
 };
